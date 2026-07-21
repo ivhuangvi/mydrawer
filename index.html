@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>時光日記</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#EFC077">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="時光日記">
+
+<style>
+  :root{
+    --bg:#F3EFE8;
+    --frame:#FBF8F3;
+    --bubble:#FFFFFF;
+    --accent:#EFC077;
+    --accent-dark:#D9A94F;
+    --text:#2B2A28;
+    --text-soft:#9A948A;
+    --border:#EAE4D8;
+    --danger:#D96A5C;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",Roboto,sans-serif;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    height:100vh;
+    overflow:hidden;
+  }
+  #app{
+    max-width:460px;
+    margin:0 auto;
+    height:100vh;
+    background:var(--frame);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    box-shadow:0 0 40px rgba(0,0,0,0.06);
+  }
+  @media (min-width:520px){
+    body{ display:flex; align-items:center; justify-content:center; }
+    #app{ height:90vh; max-height:900px; border-radius:36px; overflow:hidden; }
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    padding:20px 20px 8px;
+    flex-shrink:0;
+  }
+  .top-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+  }
+  .date-title{
+    font-size:20px;
+    font-weight:700;
+    cursor:pointer;
+    user-select:none;
+  }
+  .date-title .yr{ color:var(--text-soft); font-weight:500; font-size:14px; display:block; margin-top:2px;}
+  .icon-btn{
+    background:none;border:none;cursor:pointer;
+    width:34px;height:34px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--text);
+    border-radius:10px;
+  }
+  .icon-btn:active{ background:rgba(0,0,0,0.06); }
+  .icon-row{ display:flex; gap:2px; }
+
+  /* week strip */
+  .week-strip{
+    display:flex;
+    justify-content:space-between;
+    margin-top:16px;
+  }
+  .day-col{
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    flex:1;
+    cursor:pointer;
+    padding:4px 0;
+  }
+  .day-name{ font-size:11px; color:var(--text-soft); }
+  .day-num{
+    width:30px;height:30px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:600;
+    border-radius:50%;
+    position:relative;
+  }
+  .day-col.selected .day-num{ background:var(--accent); color:#fff; }
+  .day-col.today:not(.selected) .day-num{ box-shadow:inset 0 0 0 1.5px var(--accent-dark); color:var(--accent-dark);}
+  .has-entry .day-num::after{
+    content:"";
+    position:absolute;
+    bottom:-7px;left:50%;transform:translateX(-50%);
+    width:4px;height:4px;border-radius:50%;
+    background:var(--accent-dark);
+  }
+  .day-col.selected.has-entry .day-num::after{ background:#fff; }
+
+  header hr{ border:none;border-top:1px solid var(--border); margin:16px 0 0; }
+
+  /* ---------- Main scroll area ---------- */
+  main{
+    flex:1;
+    overflow-y:auto;
+    padding:16px 18px 90px;
+  }
+  main::-webkit-scrollbar{ width:0; }
+
+  .empty-state{
+    text-align:center;
+    color:var(--text-soft);
+    margin-top:60px;
+    font-size:14px;
+    line-height:1.7;
+  }
+  .empty-state b{ display:block; font-size:16px; color:var(--text); margin-bottom:6px; }
+
+  .entry{
+    display:flex;
+    gap:12px;
+    margin-bottom:18px;
+    align-items:flex-start;
+  }
+  .entry-time{
+    font-size:12px;
+    color:var(--text-soft);
+    width:38px;
+    flex-shrink:0;
+    padding-top:12px;
+    text-align:right;
+  }
+  .entry-card{
+    background:var(--bubble);
+    border-radius:var(--radius);
+    padding:12px 14px;
+    max-width:calc(100% - 50px);
+    box-shadow:0 1px 3px rgba(0,0,0,0.04);
+    cursor:pointer;
+    flex:1;
+  }
+  .entry-text{
+    font-size:14.5px;
+    line-height:1.55;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .entry-tags{
+    display:flex;flex-wrap:wrap;gap:6px;
+    margin-top:8px;
+  }
+  .tag-pill{
+    font-size:11px;
+    color:var(--accent-dark);
+    background:rgba(239,192,119,0.18);
+    padding:3px 9px;
+    border-radius:20px;
+  }
+  .entry-images{
+    display:grid;
+    gap:6px;
+    margin-top:8px;
+    grid-template-columns:repeat(auto-fit,minmax(90px,1fr));
+  }
+  .entry-images.single{ grid-template-columns:1fr; }
+  .entry-images img{
+    width:100%;
+    height:100%;
+    max-height:220px;
+    object-fit:cover;
+    border-radius:12px;
+    display:block;
+  }
+
+  .search-result-date{
+    font-size:12px;
+    color:var(--text-soft);
+    font-weight:700;
+    margin:18px 0 8px;
+  }
+  .search-result-date:first-child{ margin-top:0; }
+
+  .tag-grid{
+    display:flex;flex-wrap:wrap;gap:8px;
+  }
+  .tag-chip{
+    background:var(--bubble);
+    padding:8px 14px;
+    border-radius:20px;
+    font-size:13px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.04);
+    cursor:pointer;
+    display:flex;align-items:center;gap:6px;
+  }
+  .tag-chip .count{ color:var(--text-soft); font-size:11px; }
+  .tag-chip.active{ background:var(--accent); color:#fff; }
+  .tag-chip.active .count{ color:rgba(255,255,255,0.8); }
+
+  .search-box{
+    display:flex;align-items:center;gap:8px;
+    background:var(--bubble);
+    border-radius:14px;
+    padding:10px 14px;
+    margin-bottom:16px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.04);
+  }
+  .search-box input{
+    border:none;outline:none;background:none;flex:1;font-size:14px;color:var(--text);
+    font-family:inherit;
+  }
+  .search-box input::placeholder{ color:var(--text-soft); }
+
+  .settings-section{ margin-bottom:26px; }
+  .settings-section h3{ font-size:12px; color:var(--text-soft); text-transform:uppercase; letter-spacing:0.05em; margin:0 0 10px; }
+  .settings-btn{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--bubble);
+    padding:14px 16px;
+    border-radius:14px;
+    margin-bottom:8px;
+    font-size:14px;
+    cursor:pointer;
+    box-shadow:0 1px 3px rgba(0,0,0,0.04);
+    border:none;width:100%;color:var(--text);
+    font-family:inherit;text-align:left;
+  }
+  .settings-btn.danger{ color:var(--danger); }
+  .stat-row{ display:flex; gap:10px; }
+  .stat-box{
+    flex:1;background:var(--bubble);border-radius:14px;padding:14px;text-align:center;
+    box-shadow:0 1px 3px rgba(0,0,0,0.04);
+  }
+  .stat-box .num{ font-size:20px; font-weight:700; }
+  .stat-box .lbl{ font-size:11px; color:var(--text-soft); margin-top:2px; }
+
+  /* ---------- FAB ---------- */
+  .fab{
+    position:absolute;
+    right:20px;
+    bottom:88px;
+    width:52px;height:52px;
+    border-radius:50%;
+    background:var(--accent);
+    border:none;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 16px rgba(217,169,79,0.45);
+    cursor:pointer;
+    color:#fff;
+    z-index:20;
+  }
+  .fab:active{ transform:scale(0.94); }
+
+  /* ---------- Bottom nav ---------- */
+  nav{
+    display:flex;
+    justify-content:space-around;
+    padding:12px 0 max(12px, env(safe-area-inset-bottom));
+    background:var(--frame);
+    border-top:1px solid var(--border);
+    flex-shrink:0;
+    z-index:10;
+  }
+  nav button{
+    background:none;border:none;cursor:pointer;
+    color:var(--text-soft);
+    padding:6px 18px;
+    border-radius:10px;
+  }
+  nav button.active{ color:var(--accent-dark); }
+
+  /* ---------- Modal / sheet ---------- */
+  .overlay{
+    position:absolute;inset:0;
+    background:rgba(0,0,0,0.35);
+    z-index:30;
+    display:flex;align-items:flex-end;
+    opacity:0;pointer-events:none;
+    transition:opacity 0.2s;
+  }
+  .overlay.show{ opacity:1;pointer-events:auto; }
+  .sheet{
+    background:var(--frame);
+    width:100%;
+    border-radius:24px 24px 0 0;
+    padding:18px 18px 22px;
+    max-height:88%;
+    display:flex;flex-direction:column;
+    transform:translateY(100%);
+    transition:transform 0.25s;
+  }
+  .overlay.show .sheet{ transform:translateY(0); }
+  .sheet-handle{
+    width:36px;height:4px;background:var(--border);border-radius:4px;
+    margin:0 auto 14px;
+  }
+  .sheet h2{ font-size:17px;margin:0 0 14px; }
+  .sheet-scroll{ overflow-y:auto; flex:1; }
+  .field-group{
+    margin-bottom:14px;
+  }
+  .field-label{
+    display:block;
+    font-size:12px;
+    color:var(--text-soft);
+    margin-bottom:6px;
+  }
+  .field-input{
+    display:block;
+    width:100%;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:11px 12px;
+    font-family:inherit;
+    font-size:15px;
+    color:var(--text);
+    background:var(--bubble);
+    box-sizing:border-box;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .field-pair{
+    display:flex;
+    gap:10px;
+  }
+  .field-pair .field-group{ flex:1; min-width:0; }
+  textarea#entryText{
+    width:100%;
+    min-height:110px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:12px 14px;
+    font-family:inherit;
+    font-size:14.5px;
+    resize:vertical;
+    background:var(--bubble);
+    color:var(--text);
+    outline:none;
+  }
+  .tag-input-row{
+    display:flex;flex-wrap:wrap;gap:6px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:8px 10px;
+    margin-top:10px;
+    background:var(--bubble);
+  }
+  .tag-input-row input{
+    border:none;outline:none;flex:1;min-width:80px;
+    font-family:inherit;font-size:13px;color:var(--text);
+    background:none;
+  }
+  .tag-chip.editable{
+    background:rgba(239,192,119,0.22);color:var(--accent-dark);
+    box-shadow:none;padding:4px 10px;
+  }
+  .tag-chip.editable .rm{ cursor:pointer; font-weight:700; margin-left:2px;}
+  .tag-suggestions{
+    display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;
+  }
+  .tag-suggestions .tag-chip{ font-size:12px;padding:5px 11px; }
+
+  .img-preview-row{
+    display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;
+  }
+  .img-preview{
+    width:70px;height:70px;border-radius:10px;position:relative;overflow:hidden;
+  }
+  .img-preview img{ width:100%;height:100%;object-fit:cover; }
+  .img-preview .rm{
+    position:absolute;top:2px;right:2px;
+    background:rgba(0,0,0,0.55);color:#fff;
+    width:18px;height:18px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;cursor:pointer;
+  }
+  .add-img-btn{
+    width:70px;height:70px;border-radius:10px;
+    border:1.5px dashed var(--border);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--text-soft);cursor:pointer;background:none;
+  }
+
+  .sheet-actions{
+    display:flex;gap:10px;margin-top:16px;
+  }
+  .btn{
+    flex:1;
+    padding:13px;
+    border-radius:14px;
+    border:none;
+    font-size:14.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .btn-primary{ background:var(--accent); color:#fff; }
+  .btn-secondary{ background:var(--bubble); color:var(--text); }
+  .btn-danger-outline{ background:none;color:var(--danger);border:1.5px solid var(--danger); }
+
+  .action-sheet-list button{
+    display:block;width:100%;text-align:left;
+    padding:14px 4px;border:none;background:none;
+    font-size:15px;color:var(--text);
+    border-bottom:1px solid var(--border);
+    font-family:inherit;cursor:pointer;
+  }
+  .action-sheet-list button:last-child{ border-bottom:none; }
+  .action-sheet-list button.danger{ color:var(--danger); }
+
+  .toast{
+    position:absolute;bottom:88px;left:50%;transform:translateX(-50%);
+    background:rgba(43,42,40,0.92);color:#fff;
+    padding:10px 18px;border-radius:12px;font-size:13px;
+    z-index:60;opacity:0;pointer-events:none;transition:opacity 0.2s;
+  }
+  .toast.show{ opacity:1; }
+
+  .highlight{ background:rgba(239,192,119,0.35); border-radius:3px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ================= HEADER ================= -->
+  <header>
+    <div class="top-row">
+      <div class="date-title" id="dateTitle" onclick="openDatePicker()">
+        <span id="dateTitleMain">—</span>
+        <span class="yr" id="dateTitleSub"></span>
+      </div>
+      <div class="icon-row">
+        <button class="icon-btn" title="匯出備份" onclick="switchView('settings')">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </button>
+      </div>
+    </div>
+    <input type="date" id="hiddenDateInput" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">
+    <div class="week-strip" id="weekStrip"></div>
+    <hr>
+  </header>
+
+  <!-- ================= MAIN ================= -->
+  <main id="main"></main>
+
+  <button class="fab" id="fab" onclick="openEntrySheet()">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <!-- ================= BOTTOM NAV ================= -->
+  <nav>
+    <button id="navTimeline" class="active" onclick="switchView('timeline')">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </button>
+    <button id="navTags" onclick="switchView('tags')">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 22.99a2 2 0 0 1-2.83 0L1 15.83a2 2 0 0 1 0-2.83L10.59 3.41A2 2 0 0 1 12 2.83L21 3l.17 9a2 2 0 0 1-.58 1.41z"/><line x1="16.5" y1="8.5" x2="16.51" y2="8.5"/></svg>
+    </button>
+    <button id="navSearch" onclick="switchView('search')">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <button id="navSettings" onclick="switchView('settings')">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </nav>
+
+  <!-- ================= ENTRY EDITOR SHEET ================= -->
+  <div class="overlay" id="entryOverlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h2 id="entrySheetTitle">新增日記</h2>
+      <div class="sheet-scroll">
+        <div class="field-group">
+          <label class="field-label">日期</label>
+          <input type="date" id="entryDate" class="field-input">
+        </div>
+        <div class="field-group">
+          <label class="field-label">時間</label>
+          <input type="time" id="entryTime" class="field-input">
+        </div>
+        <textarea id="entryText" placeholder="寫下這一刻..."></textarea>
+
+        <div class="tag-input-row" id="tagInputRow">
+          <input type="text" id="tagInput" placeholder="新增標籤，按 Enter">
+        </div>
+        <div class="tag-suggestions" id="tagSuggestions"></div>
+
+        <div class="img-preview-row" id="imgPreviewRow">
+          <button class="add-img-btn" onclick="document.getElementById('imgFileInput').click()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </button>
+        </div>
+        <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none">
+      </div>
+      <div class="sheet-actions">
+        <button class="btn btn-secondary" onclick="closeEntrySheet()">取消</button>
+        <button class="btn btn-primary" onclick="saveEntry()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ENTRY ACTION SHEET ================= -->
+  <div class="overlay" id="actionOverlay">
+    <div class="sheet" style="padding-bottom:max(18px, env(safe-area-inset-bottom));">
+      <div class="sheet-handle"></div>
+      <div class="action-sheet-list">
+        <button onclick="editCurrentEntry()">編輯</button>
+        <button class="danger" onclick="deleteCurrentEntry()">刪除</button>
+        <button onclick="closeActionSheet()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   資料層 — IndexedDB
+============================================================ */
+const DB_NAME = 'personal_timeline_diary';
+const DB_VERSION = 1;
+let db;
+
+function openDB(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e)=>{
+      const _db = e.target.result;
+      if(!_db.objectStoreNames.contains('entries')){
+        const store = _db.createObjectStore('entries', { keyPath:'id' });
+        store.createIndex('date', 'date', { unique:false });
+      }
+    };
+    req.onsuccess = (e)=>{ db = e.target.result; resolve(db); };
+    req.onerror = (e)=> reject(e);
+  });
+}
+function dbAll(){
+  return new Promise((resolve)=>{
+    const tx = db.transaction('entries','readonly');
+    const store = tx.objectStore('entries');
+    const req = store.getAll();
+    req.onsuccess = ()=> resolve(req.result || []);
+  });
+}
+function dbPut(entry){
+  return new Promise((resolve)=>{
+    const tx = db.transaction('entries','readwrite');
+    tx.objectStore('entries').put(entry);
+    tx.oncomplete = ()=> resolve();
+  });
+}
+function dbDelete(id){
+  return new Promise((resolve)=>{
+    const tx = db.transaction('entries','readwrite');
+    tx.objectStore('entries').delete(id);
+    tx.oncomplete = ()=> resolve();
+  });
+}
+function dbClear(){
+  return new Promise((resolve)=>{
+    const tx = db.transaction('entries','readwrite');
+    tx.objectStore('entries').clear();
+    tx.oncomplete = ()=> resolve();
+  });
+}
+
+/* ============================================================
+   狀態
+============================================================ */
+let allEntries = [];               // 記憶體快取，來自 IndexedDB
+let currentView = 'timeline';      // timeline | search | tags | settings
+let selectedDate = todayStr();     // YYYY-MM-DD
+let weekAnchor = new Date();       // 週選單顯示的起點
+let editingEntryId = null;         // 目前編輯中的日記 id（null = 新增）
+let pendingImages = [];            // 編輯視窗暫存圖片 (base64)
+let pendingTags = [];              // 編輯視窗暫存標籤
+let actionTargetId = null;         // 長按/點擊要操作的日記 id
+let activeTagFilter = null;
+
+function todayStr(){
+  const d = new Date();
+  return fmtDate(d);
+}
+function fmtDate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function fmtTimeNow(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+const WEEKDAY_ABBR_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function getWeekStart(){
+  return localStorage.getItem('weekStart') || 'sun'; // 'sun' | 'mon'
+}
+function setWeekStart(v){
+  localStorage.setItem('weekStart', v);
+  render();
+}
+
+/* ============================================================
+   初始化
+============================================================ */
+(async function init(){
+  await openDB();
+  allEntries = await dbAll();
+  weekAnchor = new Date(selectedDate);
+  render();
+  document.getElementById('hiddenDateInput').addEventListener('change', (e)=>{
+    if(e.target.value){ selectedDate = e.target.value; weekAnchor = new Date(selectedDate); render(); }
+  });
+  document.getElementById('imgFileInput').addEventListener('change', handleImageSelect);
+  document.getElementById('tagInput').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      addPendingTag(e.target.value.trim());
+      e.target.value = '';
+    } else if(e.key === 'Backspace' && e.target.value === '' && pendingTags.length){
+      pendingTags.pop();
+      renderTagInputRow();
+    }
+  });
+})();
+
+/* ============================================================
+   Render 路由
+============================================================ */
+function render(){
+  renderHeader();
+  renderWeekStrip();
+  const main = document.getElementById('main');
+  document.getElementById('fab').style.display = currentView === 'timeline' ? 'flex' : 'none';
+  ['navTimeline','navTags','navSearch','navSettings'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(currentView === 'timeline'){
+    document.getElementById('navTimeline').classList.add('active');
+    main.innerHTML = renderTimeline();
+  } else if(currentView === 'search'){
+    document.getElementById('navSearch').classList.add('active');
+    main.innerHTML = renderSearchView();
+    const input = document.getElementById('searchInput');
+    if(input) input.addEventListener('input', ()=>renderSearchResults(input.value));
+  } else if(currentView === 'tags'){
+    document.getElementById('navTags').classList.add('active');
+    main.innerHTML = renderTagsView();
+  } else if(currentView === 'settings'){
+    document.getElementById('navSettings').classList.add('active');
+    main.innerHTML = renderSettingsView();
+  }
+}
+
+function switchView(view){
+  currentView = view;
+  activeTagFilter = null;
+  render();
+}
+
+/* ---------- Header ---------- */
+function renderHeader(){
+  const d = new Date(selectedDate);
+  document.getElementById('dateTitleMain').textContent = `${WEEKDAY_ABBR_EN[d.getDay()]}, ${MONTH_NAMES_EN[d.getMonth()]} ${d.getDate()}`;
+  document.getElementById('dateTitleSub').textContent = `${d.getFullYear()}`;
+}
+function openDatePicker(){
+  const input = document.getElementById('hiddenDateInput');
+  input.value = selectedDate;
+  input.showPicker ? input.showPicker() : input.click();
+}
+
+/* ---------- Week strip ---------- */
+function renderWeekStrip(){
+  const strip = document.getElementById('weekStrip');
+  const anchor = new Date(selectedDate);
+  const startOfWeek = new Date(anchor);
+  const weekStart = getWeekStart();
+  const offset = weekStart === 'mon' ? (anchor.getDay() + 6) % 7 : anchor.getDay();
+  startOfWeek.setDate(anchor.getDate() - offset);
+  const entryDates = new Set(allEntries.map(e=>e.date));
+  let html = '';
+  for(let i=0;i<7;i++){
+    const d = new Date(startOfWeek);
+    d.setDate(startOfWeek.getDate()+i);
+    const ds = fmtDate(d);
+    const isSelected = ds === selectedDate;
+    const isToday = ds === todayStr();
+    const hasEntry = entryDates.has(ds);
+    html += `<div class="day-col ${isSelected?'selected':''} ${isToday?'today':''} ${hasEntry?'has-entry':''}" onclick="selectDate('${ds}')">
+      <div class="day-name">${WEEKDAY_ABBR_EN[d.getDay()]}</div>
+      <div class="day-num">${d.getDate()}</div>
+    </div>`;
+  }
+  strip.innerHTML = html;
+}
+function selectDate(ds){
+  selectedDate = ds;
+  currentView = 'timeline';
+  render();
+}
+
+/* ---------- Timeline ---------- */
+function renderTimeline(){
+  const entries = allEntries.filter(e=>e.date===selectedDate).sort((a,b)=>a.time.localeCompare(b.time));
+  if(entries.length===0){
+    return `<div class="empty-state"><b>這天還沒有紀錄</b>點右下角的「＋」開始寫下今天的故事</div>`;
+  }
+  return entries.map(e=>renderEntryRow(e)).join('');
+}
+function renderEntryRow(e){
+  return `<div class="entry" onclick="openActionSheet('${e.id}')">
+    <div class="entry-time">${e.time}</div>
+    <div class="entry-card">
+      ${renderEntryBody(e)}
+    </div>
+  </div>`;
+}
+function renderEntryBody(e, query){
+  let html = '';
+  if(e.text){
+    html += `<div class="entry-text">${escapeHtml(e.text, query)}</div>`;
+  }
+  if(e.tags && e.tags.length){
+    html += `<div class="entry-tags">${e.tags.map(t=>`<span class="tag-pill">#${escapeHtml(t)}</span>`).join('')}</div>`;
+  }
+  if(e.images && e.images.length){
+    html += `<div class="entry-images ${e.images.length===1?'single':''}">${e.images.map(img=>`<img src="${img}">`).join('')}</div>`;
+  }
+  return html;
+}
+function escapeHtml(str, query){
+  let s = str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  if(query){
+    const q = query.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    if(q.trim()){
+      try{
+        const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+        s = s.replace(re, '<span class="highlight">$1</span>');
+      }catch(err){}
+    }
+  }
+  return s;
+}
+
+/* ---------- Search ---------- */
+function renderSearchView(){
+  return `
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="搜尋日記內容或標籤...">
+    </div>
+    <div id="searchResults"><div class="empty-state">輸入關鍵字以搜尋全部日記</div></div>
+  `;
+}
+function renderSearchResults(query){
+  const box = document.getElementById('searchResults');
+  const q = query.trim().toLowerCase();
+  if(!q){ box.innerHTML = `<div class="empty-state">輸入關鍵字以搜尋全部日記</div>`; return; }
+  const matches = allEntries.filter(e=>{
+    const inText = e.text && e.text.toLowerCase().includes(q);
+    const inTags = e.tags && e.tags.some(t=>t.toLowerCase().includes(q));
+    return inText || inTags;
+  }).sort((a,b)=> (a.date+a.time) < (b.date+b.time) ? 1 : -1);
+
+  if(matches.length===0){ box.innerHTML = `<div class="empty-state">找不到符合「${escapeHtml(query)}」的日記</div>`; return; }
+
+  let lastDate = null;
+  let html = '';
+  matches.forEach(e=>{
+    if(e.date !== lastDate){
+      const d = new Date(e.date);
+      html += `<div class="search-result-date">${e.date} · ${WEEKDAY_ABBR_EN[d.getDay()]}</div>`;
+      lastDate = e.date;
+    }
+    html += `<div class="entry" onclick="jumpToEntry('${e.id}','${e.date}')">
+      <div class="entry-time">${e.time}</div>
+      <div class="entry-card">${renderEntryBody(e, query)}</div>
+    </div>`;
+  });
+  box.innerHTML = html;
+}
+function jumpToEntry(id, date){
+  selectedDate = date;
+  currentView = 'timeline';
+  render();
+}
+
+/* ---------- Tags ---------- */
+function renderTagsView(){
+  const counts = {};
+  allEntries.forEach(e=> (e.tags||[]).forEach(t=> counts[t] = (counts[t]||0)+1));
+  const tags = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  let html = '';
+  if(tags.length===0){
+    html = `<div class="empty-state"><b>還沒有任何標籤</b>在新增日記時可以加上標籤方便分類</div>`;
+  } else {
+    html += `<div class="tag-grid" style="margin-bottom:20px;">`;
+    html += tags.map(t=>`<div class="tag-chip ${activeTagFilter===t?'active':''}" onclick="toggleTagFilter('${t.replace(/'/g,"\\'")}')">#${escapeHtml(t)}<span class="count">${counts[t]}</span></div>`).join('');
+    html += `</div>`;
+    if(activeTagFilter){
+      const matches = allEntries.filter(e=>(e.tags||[]).includes(activeTagFilter)).sort((a,b)=> (a.date+a.time) < (b.date+b.time) ? 1 : -1);
+      let lastDate = null;
+      matches.forEach(e=>{
+        if(e.date !== lastDate){
+          html += `<div class="search-result-date">${e.date}</div>`;
+          lastDate = e.date;
+        }
+        html += `<div class="entry" onclick="jumpToEntry('${e.id}','${e.date}')">
+          <div class="entry-time">${e.time}</div>
+          <div class="entry-card">${renderEntryBody(e)}</div>
+        </div>`;
+      });
+    }
+  }
+  return html;
+}
+function toggleTagFilter(t){
+  activeTagFilter = activeTagFilter === t ? null : t;
+  render();
+}
+
+/* ---------- Settings ---------- */
+function renderSettingsView(){
+  const totalEntries = allEntries.length;
+  const totalTags = new Set(allEntries.flatMap(e=>e.tags||[])).size;
+  const totalImages = allEntries.reduce((n,e)=>n+(e.images?e.images.length:0),0);
+  return `
+    <div class="stat-row" style="margin-bottom:24px;">
+      <div class="stat-box"><div class="num">${totalEntries}</div><div class="lbl">篇日記</div></div>
+      <div class="stat-box"><div class="num">${totalTags}</div><div class="lbl">個標籤</div></div>
+      <div class="stat-box"><div class="num">${totalImages}</div><div class="lbl">張照片</div></div>
+    </div>
+    <div class="settings-section">
+      <h3>一週開始日</h3>
+      <div class="tag-grid">
+        <div class="tag-chip ${getWeekStart()==='sun'?'active':''}" onclick="setWeekStart('sun')">週日 (Sun)</div>
+        <div class="tag-chip ${getWeekStart()==='mon'?'active':''}" onclick="setWeekStart('mon')">週一 (Mon)</div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>備份與還原</h3>
+      <button class="settings-btn" onclick="exportData()">匯出備份檔 (.json，含照片，完整還原用)</button>
+      <button class="settings-btn" onclick="exportMarkdown()">匯出文字備份 (.md，可讀 / 可編輯)</button>
+      <button class="settings-btn" onclick="document.getElementById('importFileInput').click()">從備份檔匯入（自動辨識 .json / .md / .txt）</button>
+      <input type="file" id="importFileInput" accept=".json,.md,.txt,application/json,text/markdown,text/plain" style="display:none" onchange="importData(event)">
+    </div>
+    <div class="settings-section">
+      <h3>關於</h3>
+      <div class="settings-btn" style="cursor:default;">此 App 完全離線運作，所有內容只儲存在這台裝置的瀏覽器中，請定期匯出備份以免遺失資料。JSON 備份保留完整照片與資料，適合還原；文字備份（.md）內容以純文字＋內嵌圖片編碼呈現，方便閱讀或用文字編輯器修改後再匯入。</div>
+    </div>
+    <div class="settings-section">
+      <h3>危險區域</h3>
+      <button class="settings-btn danger" onclick="clearAllData()">清除所有資料</button>
+    </div>
+  `;
+}
+
+function exportData(){
+  const payload = { exportedAt: new Date().toISOString(), entries: allEntries };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `diary-backup-${todayStr()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('已匯出備份檔');
+}
+function toMarkdown(entries){
+  const sorted = [...entries].sort((a,b)=> (a.date+a.time) < (b.date+b.time) ? -1 : 1);
+  let md = `# 時光日記備份\n匯出時間: ${new Date().toISOString()}\n`;
+  let lastDate = null;
+  sorted.forEach(e=>{
+    if(e.date !== lastDate){
+      md += `\n## ${e.date}\n`;
+      lastDate = e.date;
+    }
+    md += `\n### ${e.time}\n`;
+    if(e.text) md += `${e.text}\n`;
+    if(e.tags && e.tags.length) md += `\n標籤: ${e.tags.map(t=>'#'+t).join(' ')}\n`;
+    if(e.images && e.images.length){
+      e.images.forEach(img=>{ md += `\n![image](${img})\n`; });
+    }
+    md += `\n---\n`;
+  });
+  return md;
+}
+function exportMarkdown(){
+  const md = toMarkdown(allEntries);
+  const blob = new Blob([md], {type:'text/markdown'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `diary-backup-${todayStr()}.md`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('已匯出文字備份');
+}
+function parseMarkdownBackup(text){
+  text = text.replace(/\r\n/g,'\n');
+  const entries = [];
+  const dateBlocks = text.split(/\n## /).slice(1);
+  dateBlocks.forEach(block=>{
+    const dateMatch = block.match(/^(\S+)/);
+    if(!dateMatch) return;
+    const date = dateMatch[1].trim();
+    const entryBlocks = block.split(/\n### /).slice(1);
+    entryBlocks.forEach(eb=>{
+      const timeMatch = eb.match(/^(\S+)/);
+      if(!timeMatch) return;
+      const time = timeMatch[1].trim();
+      let body = eb.slice(timeMatch[0].length);
+      body = body.split(/\n---\s*(\n|$)/)[0];
+      let tags = [];
+      const tagMatch = body.match(/\n標籤:\s*(.+)/);
+      if(tagMatch){
+        tags = tagMatch[1].split(/\s+/).map(t=>t.replace(/^#/,'')).filter(Boolean);
+        body = body.replace(tagMatch[0], '');
+      }
+      const images = [];
+      body = body.replace(/!\[image\]\((data:[^)]+)\)/g, (m, src)=>{ images.push(src); return ''; });
+      entries.push({
+        id: genId(),
+        date, time,
+        text: body.trim(),
+        tags, images,
+        createdAt: Date.now()
+      });
+    });
+  });
+  return entries;
+}
+function importData(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    let entries = null;
+    let source = '';
+    try{
+      const data = JSON.parse(reader.result);
+      entries = data.entries || data;
+      if(!Array.isArray(entries)) entries = null;
+      source = 'JSON';
+    }catch(err){ /* not JSON, try markdown below */ }
+    if(!entries){
+      try{
+        entries = parseMarkdownBackup(reader.result);
+        source = 'Markdown';
+        if(entries.length === 0) entries = null;
+      }catch(err){ entries = null; }
+    }
+    if(!entries){
+      showToast('匯入失敗，檔案格式不正確');
+      evt.target.value = '';
+      return;
+    }
+    for(const e of entries){
+      if(!e.id) e.id = genId();
+      await dbPut(e);
+    }
+    allEntries = await dbAll();
+    showToast(`已從 ${source} 匯入 ${entries.length} 筆日記`);
+    render();
+    evt.target.value = '';
+  };
+  reader.readAsText(file);
+}
+async function clearAllData(){
+  if(!confirm('確定要清除所有日記資料嗎？此動作無法復原，建議先匯出備份。')) return;
+  if(!confirm('再次確認：真的要刪除全部資料嗎？')) return;
+  await dbClear();
+  allEntries = [];
+  showToast('已清除所有資料');
+  render();
+}
+
+/* ============================================================
+   新增 / 編輯日記
+============================================================ */
+function openEntrySheet(entry){
+  editingEntryId = entry ? entry.id : null;
+  document.getElementById('entrySheetTitle').textContent = entry ? '編輯日記' : '新增日記';
+  document.getElementById('entryDate').value = entry ? entry.date : selectedDate;
+  document.getElementById('entryTime').value = entry ? entry.time : fmtTimeNow();
+  document.getElementById('entryText').value = entry ? (entry.text||'') : '';
+  pendingImages = entry && entry.images ? [...entry.images] : [];
+  pendingTags = entry && entry.tags ? [...entry.tags] : [];
+  renderTagInputRow();
+  renderImgPreview();
+  renderTagSuggestions();
+  document.getElementById('entryOverlay').classList.add('show');
+  setTimeout(()=>document.getElementById('entryText').focus(), 250);
+}
+function closeEntrySheet(){
+  document.getElementById('entryOverlay').classList.remove('show');
+  editingEntryId = null;
+}
+function genId(){
+  return 'e_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+}
+async function saveEntry(){
+  const date = document.getElementById('entryDate').value || selectedDate;
+  const time = document.getElementById('entryTime').value || fmtTimeNow();
+  const text = document.getElementById('entryText').value.trim();
+  if(!text && pendingImages.length===0){
+    showToast('請輸入內容或加入照片');
+    return;
+  }
+  const entry = {
+    id: editingEntryId || genId(),
+    date, time, text,
+    tags: [...pendingTags],
+    images: [...pendingImages],
+    createdAt: editingEntryId ? (allEntries.find(e=>e.id===editingEntryId)||{}).createdAt || Date.now() : Date.now()
+  };
+  await dbPut(entry);
+  allEntries = await dbAll();
+  selectedDate = date;
+  closeEntrySheet();
+  currentView = 'timeline';
+  render();
+  showToast('已儲存');
+}
+
+/* ---------- Tag input ---------- */
+function addPendingTag(name){
+  if(!name) return;
+  name = name.replace(/^#/,'').trim();
+  if(!name) return;
+  if(!pendingTags.includes(name)) pendingTags.push(name);
+  renderTagInputRow();
+  renderTagSuggestions();
+}
+function removePendingTag(name){
+  pendingTags = pendingTags.filter(t=>t!==name);
+  renderTagInputRow();
+  renderTagSuggestions();
+}
+function renderTagInputRow(){
+  const row = document.getElementById('tagInputRow');
+  const input = document.getElementById('tagInput');
+  row.querySelectorAll('.tag-chip').forEach(el=>el.remove());
+  pendingTags.forEach(t=>{
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip editable';
+    chip.innerHTML = `#${t.replace(/</g,'&lt;')} <span class="rm" onclick="removePendingTag('${t.replace(/'/g,"\\'")}')">×</span>`;
+    row.insertBefore(chip, input);
+  });
+}
+function renderTagSuggestions(){
+  const allTagNames = [...new Set(allEntries.flatMap(e=>e.tags||[]))].filter(t=>!pendingTags.includes(t));
+  const box = document.getElementById('tagSuggestions');
+  if(allTagNames.length===0){ box.innerHTML=''; return; }
+  box.innerHTML = allTagNames.slice(0,10).map(t=>`<div class="tag-chip" onclick="addPendingTag('${t.replace(/'/g,"\\'")}')">#${t.replace(/</g,'&lt;')}</div>`).join('');
+}
+
+/* ---------- Image handling ---------- */
+function handleImageSelect(evt){
+  const files = Array.from(evt.target.files || []);
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const canvas = document.createElement('canvas');
+        const maxW = 1080;
+        const scale = Math.min(1, maxW / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        pendingImages.push(dataUrl);
+        renderImgPreview();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  evt.target.value = '';
+}
+function renderImgPreview(){
+  const row = document.getElementById('imgPreviewRow');
+  const addBtn = row.querySelector('.add-img-btn');
+  row.querySelectorAll('.img-preview').forEach(el=>el.remove());
+  pendingImages.forEach((src, idx)=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'img-preview';
+    wrap.innerHTML = `<img src="${src}"><div class="rm" onclick="removePendingImage(${idx})">×</div>`;
+    row.insertBefore(wrap, addBtn);
+  });
+}
+function removePendingImage(idx){
+  pendingImages.splice(idx,1);
+  renderImgPreview();
+}
+
+/* ============================================================
+   日記操作（編輯 / 刪除）
+============================================================ */
+function openActionSheet(id){
+  actionTargetId = id;
+  document.getElementById('actionOverlay').classList.add('show');
+}
+function closeActionSheet(){
+  document.getElementById('actionOverlay').classList.remove('show');
+  actionTargetId = null;
+}
+function editCurrentEntry(){
+  const entry = allEntries.find(e=>e.id===actionTargetId);
+  closeActionSheet();
+  if(entry) openEntrySheet(entry);
+}
+async function deleteCurrentEntry(){
+  const id = actionTargetId;
+  closeActionSheet();
+  if(!confirm('確定要刪除這篇日記嗎？')) return;
+  await dbDelete(id);
+  allEntries = await dbAll();
+  render();
+  showToast('已刪除');
+}
+
+/* ============================================================
+   Toast
+============================================================ */
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+/* 點擊 overlay 背景可關閉 sheet */
+document.getElementById('entryOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'entryOverlay') closeEntrySheet();
+});
+document.getElementById('actionOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'actionOverlay') closeActionSheet();
+});
+
+/* ============================================================
+   PWA — 註冊 Service Worker（需透過 https 或 localhost 才會生效）
+============================================================ */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{
+      // 若透過 file:// 直接開啟，瀏覽器不允許註冊 Service Worker，
+      // 這時 app 仍可正常使用，只是不會被安裝成完整的 PWA。
+    });
+  });
+}
+</script>
+</body>
+</html>
