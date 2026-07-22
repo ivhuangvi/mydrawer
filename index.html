@@ -68,7 +68,9 @@
   }
   #app{
     position:fixed;
-    inset:0;
+    top:0; left:0; right:0;
+    height:100vh;
+    height:var(--app-height, 100vh);
     max-width:460px;
     margin:0 auto;
     background:var(--frame);
@@ -78,7 +80,7 @@
   }
   @media (min-width:520px){
     body{ display:flex; align-items:center; justify-content:center; }
-    #app{ position:relative; inset:auto; height:90vh; max-height:900px; border-radius:36px; overflow:hidden; }
+    #app{ position:relative; top:auto; left:auto; right:auto; height:90vh; max-height:900px; border-radius:36px; overflow:hidden; }
   }
 
   /* ---------- Header ---------- */
@@ -759,6 +761,22 @@
 </div>
 
 <script>
+/* ============================================================
+   視窗高度修正 — 用 JS 實測像素高度，避免 iOS 獨立模式下
+   vh/dvh/position:fixed 量測誤差造成底部留白
+============================================================ */
+function setAppHeight(){
+  const h = window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', h + 'px');
+}
+setAppHeight();
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', ()=>{ setTimeout(setAppHeight, 150); });
+window.addEventListener('pageshow', setAppHeight);
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', setAppHeight);
+}
+
 /* ============================================================
    資料層 — IndexedDB
 ============================================================ */
