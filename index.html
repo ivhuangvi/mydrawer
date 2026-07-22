@@ -70,7 +70,8 @@
     position:fixed;
     top:0; left:0; right:0;
     height:100vh;
-    height:var(--app-height, 100vh);
+    height:100dvh;
+    height:var(--app-height, 100dvh);
     max-width:460px;
     margin:0 auto;
     background:var(--frame);
@@ -749,33 +750,54 @@
 
 <script>
 /* ============================================================
-   視窗高度修正 — 用 JS 實測像素高度，避免 iOS 獨立模式下
-   vh/dvh/position:fixed 量測誤差造成底部留白
+   視窗高度修正
 
-   優先採用 visualViewport.height：
-   - 獨立模式（加入主畫面）剛啟動時，window.innerHeight 有機率
-     量到還沒穩定的數值，且之後不會再觸發 resize 事件去修正，
-     造成畫面底部永久留白，所以啟動後額外多量測幾次。
-   - 鍵盤彈出時 visualViewport.height 會確實縮小，讓 #app 跟著
-     縮到鍵盤上緣，取代 iOS 內建「捲動聚焦欄位到可視範圍」的
-     行為，避免整頁被強制上推、需要手動滑回來的問題。
+   靜止狀態（沒有鍵盤）一律交給 CSS 原生的 100dvh 處理 —
+   實測用 JS 量 window.innerHeight / visualViewport.height 在
+   iOS 獨立模式下不可靠（量到的值可能不含底部安全區域，或加回
+   safe-area-inset-bottom 後仍對不齊），導致底部留白時好時壞。
+   100dvh 由瀏覽器自己維護，是目前判斷「目前真正可視高度」最
+   準確的方式，所以預設完全不覆寫 --app-height。
+
+   只有在鍵盤彈出、visualViewport.height 明顯變小時，才用 JS
+   把 #app 縮到鍵盤上緣，同時取消 iOS 對聚焦欄位做的自動整頁
+   上推捲動，避免畫面跳動、需要手動滑回來才能繼續輸入。
 ============================================================ */
+let restingViewportHeight = null;
+
+function captureRestingHeight(){
+  const vv = window.visualViewport;
+  const h = vv ? vv.height : window.innerHeight;
+  // 忽略鍵盤開啟中量到的偏小數值，避免把「鍵盤縮小後的高度」誤存成基準值
+  if(restingViewportHeight === null || h > restingViewportHeight){
+    restingViewportHeight = h;
+  }
+}
+
 function setAppHeight(){
   const vv = window.visualViewport;
   const h = vv ? vv.height : window.innerHeight;
-  document.documentElement.style.setProperty('--app-height', h + 'px');
+  const KEYBOARD_THRESHOLD = 80; // px，避免把小數點誤差或工具列微調誤判成鍵盤
+  if(restingViewportHeight !== null && h < restingViewportHeight - KEYBOARD_THRESHOLD){
+    // 鍵盤開啟中：把 #app 縮到鍵盤上緣可視範圍
+    document.documentElement.style.setProperty('--app-height', h + 'px');
+  } else {
+    // 靜止狀態：交還給 CSS 的 100dvh 處理，並順便更新基準值
+    document.documentElement.style.removeProperty('--app-height');
+    captureRestingHeight();
+  }
 }
-setAppHeight();
-window.addEventListener('resize', setAppHeight);
-window.addEventListener('orientationchange', ()=>{ setTimeout(setAppHeight, 150); });
-window.addEventListener('pageshow', setAppHeight);
+
+captureRestingHeight();
 window.addEventListener('load', ()=>{
-  // 獨立模式冷啟動時視窗尺寸可能尚未穩定，多補測幾次避免底部留白
-  setAppHeight();
-  requestAnimationFrame(setAppHeight);
-  setTimeout(setAppHeight, 100);
-  setTimeout(setAppHeight, 400);
+  captureRestingHeight();
+  setTimeout(captureRestingHeight, 300);
 });
+window.addEventListener('orientationchange', ()=>{
+  restingViewportHeight = null;
+  setTimeout(()=>{ captureRestingHeight(); setAppHeight(); }, 200);
+});
+window.addEventListener('resize', setAppHeight);
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', setAppHeight);
   // 取消 iOS 對聚焦欄位做的自動整頁上推捲動（因為版面已固定，
