@@ -71,6 +71,7 @@
     top:0; left:0; right:0;
     height:100vh;
     height:var(--app-height, 100vh);
+    height:calc(var(--app-height, 100vh) + env(safe-area-inset-bottom));
     max-width:460px;
     margin:0 auto;
     background:var(--frame);
