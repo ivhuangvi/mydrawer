@@ -752,54 +752,60 @@
 /* ============================================================
    視窗高度修正
 
-   靜止狀態（沒有鍵盤）一律交給 CSS 原生的 100dvh 處理 —
-   實測用 JS 量 window.innerHeight / visualViewport.height 在
-   iOS 獨立模式下不可靠（量到的值可能不含底部安全區域，或加回
-   safe-area-inset-bottom 後仍對不齊），導致底部留白時好時壞。
-   100dvh 由瀏覽器自己維護，是目前判斷「目前真正可視高度」最
-   準確的方式，所以預設完全不覆寫 --app-height。
+   iOS 獨立模式（尤其是「剛加入主畫面、第一次開啟」的冷啟動）
+   有個已知怪癖：瀏覽器回報的視窗尺寸（包含 100dvh、
+   window.innerHeight、visualViewport.height）在畫面真正穩定
+   前可能量到不準的數值，且穩定後也不會自動觸發任何事件通知
+   我們重新計算，導致 #app 卡住停留在「剛啟動當下量錯」的高度。
 
-   只有在鍵盤彈出、visualViewport.height 明顯變小時，才用 JS
-   把 #app 縮到鍵盤上緣，同時取消 iOS 對聚焦欄位做的自動整頁
-   上推捲動，避免畫面跳動、需要手動滑回來才能繼續輸入。
+   與其猜測「哪個數值才是對的」，這裡改用「量測目前實際落差、
+   有落差就修正」的自我校正方式：比較 #app 實際渲染出來的高度
+   跟 visualViewport 目前的可視高度，兩者對不上就直接覆寫
+   --app-height 補上落差。啟動後短時間內重複執行幾次，涵蓋畫面
+   逐漸穩定下來的過程；鍵盤彈出/收起也會被同一套邏輯處理到，
+   不需要另外判斷「現在是不是鍵盤造成的」。
 ============================================================ */
-let restingViewportHeight = null;
-
-function captureRestingHeight(){
+function syncAppHeight(){
+  const app = document.getElementById('app');
+  if(!app) return;
   const vv = window.visualViewport;
-  const h = vv ? vv.height : window.innerHeight;
-  // 忽略鍵盤開啟中量到的偏小數值，避免把「鍵盤縮小後的高度」誤存成基準值
-  if(restingViewportHeight === null || h > restingViewportHeight){
-    restingViewportHeight = h;
+  const viewportHeight = Math.round(vv ? vv.height : window.innerHeight);
+  const renderedHeight = Math.round(app.getBoundingClientRect().height);
+  if(Math.abs(viewportHeight - renderedHeight) > 1){
+    document.documentElement.style.setProperty('--app-height', viewportHeight + 'px');
   }
 }
 
-function setAppHeight(){
-  const vv = window.visualViewport;
-  const h = vv ? vv.height : window.innerHeight;
-  const KEYBOARD_THRESHOLD = 80; // px，避免把小數點誤差或工具列微調誤判成鍵盤
-  if(restingViewportHeight !== null && h < restingViewportHeight - KEYBOARD_THRESHOLD){
-    // 鍵盤開啟中：把 #app 縮到鍵盤上緣可視範圍
-    document.documentElement.style.setProperty('--app-height', h + 'px');
-  } else {
-    // 靜止狀態：交還給 CSS 的 100dvh 處理，並順便更新基準值
-    document.documentElement.style.removeProperty('--app-height');
-    captureRestingHeight();
-  }
+// 強制瀏覽器重新解析 viewport meta，藉此讓 iOS 重新計算安全區域 /
+// dvh 等視窗尺寸資訊——已知能修正冷啟動時量錯視窗高度的問題
+function nudgeViewportRecalc(){
+  const meta = document.querySelector('meta[name="viewport"]');
+  if(!meta) return;
+  const original = meta.getAttribute('content');
+  meta.setAttribute('content', original + ',minimum-scale=1.0');
+  requestAnimationFrame(()=>{
+    meta.setAttribute('content', original);
+    syncAppHeight();
+  });
 }
 
-captureRestingHeight();
+syncAppHeight();
 window.addEventListener('load', ()=>{
-  captureRestingHeight();
-  setTimeout(captureRestingHeight, 300);
+  syncAppHeight();
+  nudgeViewportRecalc();
+  // 冷啟動畫面穩定所需的時間不固定，多補測幾次
+  [50, 150, 300, 600, 1000, 1800].forEach(delay=>{
+    setTimeout(syncAppHeight, delay);
+  });
 });
-window.addEventListener('orientationchange', ()=>{
-  restingViewportHeight = null;
-  setTimeout(()=>{ captureRestingHeight(); setAppHeight(); }, 200);
+window.addEventListener('pageshow', syncAppHeight);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') setTimeout(syncAppHeight, 100);
 });
-window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', ()=>{ setTimeout(syncAppHeight, 200); });
+window.addEventListener('resize', syncAppHeight);
 if(window.visualViewport){
-  window.visualViewport.addEventListener('resize', setAppHeight);
+  window.visualViewport.addEventListener('resize', syncAppHeight);
   // 取消 iOS 對聚焦欄位做的自動整頁上推捲動（因為版面已固定，
   // 這個內建行為只會造成畫面跳動，需手動滑回來才能繼續輸入）
   const cancelForcedPan = ()=>{
