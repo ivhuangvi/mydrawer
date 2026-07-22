@@ -1,4 +1,4 @@
-// 時光日記 — Service Worker
+// Drawer Diary — Service Worker
 // 快取整個 app shell，讓 app 在沒有網路的情況下也能開啟與使用。
 // 使用者的日記內容一律存在 IndexedDB（由 index.html 內的程式碼處理），
 // 這個檔案只負責快取「app 本身的檔案」，不會碰到日記資料。

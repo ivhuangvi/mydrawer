@@ -2,8 +2,8 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>時光日記</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Drawer Diary</title>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="時光日記">
+<meta name="apple-mobile-web-app-title" content="Drawer Diary">
 
 <style>
   :root{
@@ -28,20 +28,46 @@
     --danger:#D96A5C;
     --radius:18px;
   }
+  html[data-theme="cool"]{
+    --bg:#E7EAEE;
+    --frame:#F4F6F8;
+    --bubble:#FFFFFF;
+    --accent:#3A4A63;
+    --accent-dark:#1F2937;
+    --text:#20242C;
+    --text-soft:#8A93A3;
+    --border:#DCE1E7;
+    --danger:#C0453B;
+  }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{
+    margin:0;padding:0;
+    height:100%;
+    overscroll-behavior:none;
+  }
+  html{
+    position:fixed;
+    inset:0;
+    width:100%;
+  }
   body{
     background:var(--bg);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",Roboto,sans-serif;
     color:var(--text);
     -webkit-font-smoothing:antialiased;
-    height:100vh;
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
     overflow:hidden;
+    overscroll-behavior:none;
+    touch-action:pan-y;
   }
   #app{
     max-width:460px;
     margin:0 auto;
-    height:100vh;
+    height:100%;
+    height:100dvh;
     background:var(--frame);
     display:flex;
     flex-direction:column;
@@ -55,7 +81,7 @@
 
   /* ---------- Header ---------- */
   header{
-    padding:20px 20px 8px;
+    padding:calc(20px + env(safe-area-inset-top) + 14px) 20px 8px;
     flex-shrink:0;
   }
   .top-row{
@@ -117,6 +143,8 @@
   main{
     flex:1;
     overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
     padding:16px 18px 90px;
   }
   main::-webkit-scrollbar{ width:0; }
@@ -268,7 +296,7 @@
   nav{
     display:flex;
     justify-content:space-around;
-    padding:12px 0 max(12px, env(safe-area-inset-bottom));
+    padding:12px 0 max(12px, calc(env(safe-area-inset-bottom) + 16px));
     background:var(--frame);
     border-top:1px solid var(--border);
     flex-shrink:0;
@@ -430,6 +458,99 @@
   .toast.show{ opacity:1; }
 
   .highlight{ background:rgba(239,192,119,0.35); border-radius:3px; }
+
+  .entry-text{ -webkit-user-select:text; user-select:text; }
+
+  /* ---------- Month calendar ---------- */
+  .month-header{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .month-header .label{ font-size:16px; font-weight:700; }
+  .month-weekday-row{
+    display:grid;grid-template-columns:repeat(7,1fr);
+    text-align:center;font-size:11px;color:var(--text-soft);
+    margin-bottom:8px;
+  }
+  .month-days-grid{
+    display:grid;grid-template-columns:repeat(7,1fr);
+    gap:4px 0;
+  }
+  .month-day{
+    aspect-ratio:1;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:50%;
+    font-size:14px;
+    position:relative;
+    cursor:pointer;
+  }
+  .month-day.muted{ color:var(--text-soft); opacity:0.4; }
+  .month-day.selected{ background:var(--accent); color:#fff; }
+  .month-day.today:not(.selected){ box-shadow:inset 0 0 0 1.5px var(--accent-dark); color:var(--accent-dark); }
+  .month-day.has-entry::after{
+    content:"";position:absolute;bottom:3px;left:50%;transform:translateX(-50%);
+    width:4px;height:4px;border-radius:50%;background:var(--accent-dark);
+  }
+  .month-day.selected.has-entry::after{ background:#fff; }
+
+  /* ---------- Composer (new/edit entry) ---------- */
+  .composer-sheet{ padding:14px 16px calc(16px + env(safe-area-inset-bottom)); }
+  .composer-body{ max-height:46vh; overflow-y:auto; }
+  .composer-textarea{
+    width:100%;
+    border:none;
+    outline:none;
+    resize:none;
+    background:none;
+    font-family:inherit;
+    font-size:16px;
+    line-height:1.5;
+    color:var(--text);
+    padding:6px 2px;
+    min-height:34px;
+    max-height:38vh;
+    overflow-y:auto;
+  }
+  .composer-textarea::placeholder{ color:var(--text-soft); }
+  .composer-meta{
+    font-size:12.5px;
+    color:var(--text-soft);
+    padding:2px 2px 6px;
+    cursor:pointer;
+    display:inline-block;
+  }
+  .composer-datetime-row{
+    display:flex;gap:8px;margin:0 2px 10px;
+  }
+  .composer-datetime-row .field-input{ font-size:13px; padding:8px 10px; }
+  .composer-toolbar{
+    display:flex;align-items:center;gap:4px;
+    padding-top:8px;
+    border-top:1px solid var(--border);
+    margin-top:6px;
+  }
+  .composer-icon-btn{
+    background:none;border:none;cursor:pointer;
+    width:36px;height:36px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--text-soft);
+    border-radius:50%;
+  }
+  .composer-icon-btn:active{ background:rgba(0,0,0,0.06); }
+  .composer-icon-btn.active{ color:var(--accent-dark); background:rgba(239,192,119,0.18); }
+  .composer-icon-btn.recording{ color:var(--danger); }
+  .composer-send-btn{
+    width:38px;height:38px;
+    border-radius:50%;
+    border:none;
+    background:var(--border);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:background 0.15s;
+  }
+  .composer-send-btn.active{ background:var(--accent); }
+  .composer-send-btn:active{ transform:scale(0.94); }
 </style>
 </head>
 <body>
@@ -443,8 +564,14 @@
         <span class="yr" id="dateTitleSub"></span>
       </div>
       <div class="icon-row">
-        <button class="icon-btn" title="匯出備份" onclick="switchView('settings')">
+        <button class="icon-btn" title="分享今天的日記" onclick="openShareSheet()">
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </button>
+        <button class="icon-btn" title="月曆" onclick="openMonthView()">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="15" r="1"/><circle cx="12" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
+        </button>
+        <button class="icon-btn" title="回到今天" onclick="goToday()">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
         </button>
       </div>
     </div>
@@ -476,38 +603,46 @@
     </button>
   </nav>
 
-  <!-- ================= ENTRY EDITOR SHEET ================= -->
+  <!-- ================= ENTRY COMPOSER SHEET ================= -->
   <div class="overlay" id="entryOverlay">
-    <div class="sheet">
+    <div class="sheet composer-sheet">
       <div class="sheet-handle"></div>
-      <h2 id="entrySheetTitle">新增日記</h2>
-      <div class="sheet-scroll">
-        <div class="field-group">
-          <label class="field-label">日期</label>
-          <input type="date" id="entryDate" class="field-input">
-        </div>
-        <div class="field-group">
-          <label class="field-label">時間</label>
-          <input type="time" id="entryTime" class="field-input">
-        </div>
-        <textarea id="entryText" placeholder="寫下這一刻..."></textarea>
-
-        <div class="tag-input-row" id="tagInputRow">
+      <div class="composer-body">
+        <textarea id="entryText" class="composer-textarea" placeholder="寫下這一刻..." rows="1"></textarea>
+        <div class="img-preview-row" id="imgPreviewRow"></div>
+        <div class="tag-input-row" id="tagInputRow" style="display:none;">
           <input type="text" id="tagInput" placeholder="新增標籤，按 Enter">
         </div>
         <div class="tag-suggestions" id="tagSuggestions"></div>
+      </div>
 
-        <div class="img-preview-row" id="imgPreviewRow">
-          <button class="add-img-btn" onclick="document.getElementById('imgFileInput').click()">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          </button>
-        </div>
-        <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none">
+      <div class="composer-meta" id="composerMeta" onclick="toggleComposerDateTime()">—</div>
+      <div class="composer-datetime-row" id="composerDateTimeRow" style="display:none;">
+        <input type="date" id="entryDate" class="field-input">
+        <input type="time" id="entryTime" class="field-input">
       </div>
-      <div class="sheet-actions">
-        <button class="btn btn-secondary" onclick="closeEntrySheet()">取消</button>
-        <button class="btn btn-primary" onclick="saveEntry()">儲存</button>
+
+      <div class="composer-toolbar">
+        <button class="composer-icon-btn" title="拍照" onclick="triggerCamera()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </button>
+        <button class="composer-icon-btn" title="相簿" onclick="triggerGallery()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </button>
+        <button class="composer-icon-btn" id="micBtn" title="語音輸入" onclick="toggleVoiceInput()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <button class="composer-icon-btn" id="tagToggleBtn" title="標籤" onclick="toggleTagRow()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+        </button>
+        <div style="flex:1"></div>
+        <button class="composer-send-btn" id="sendBtn" onclick="saveEntry()" title="儲存">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
       </div>
+
+      <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none">
+      <input type="file" id="cameraFileInput" accept="image/*" capture="environment" style="display:none">
     </div>
   </div>
 
@@ -517,9 +652,42 @@
       <div class="sheet-handle"></div>
       <div class="action-sheet-list">
         <button onclick="editCurrentEntry()">編輯</button>
+        <button onclick="copyCurrentEntryText()">複製文字</button>
+        <button onclick="shareCurrentEntry()">分享</button>
         <button class="danger" onclick="deleteCurrentEntry()">刪除</button>
         <button onclick="closeActionSheet()">取消</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ================= SHARE TODAY SHEET ================= -->
+  <div class="overlay" id="shareOverlay">
+    <div class="sheet" style="padding-bottom:max(18px, env(safe-area-inset-bottom));">
+      <div class="sheet-handle"></div>
+      <h2 style="font-size:15px;color:var(--text-soft);margin:0 0 4px;">分享今天的日記</h2>
+      <div class="action-sheet-list">
+        <button onclick="shareTodayAsText()">分享為文字</button>
+        <button onclick="shareTodayAsImage()">分享為圖片</button>
+        <button onclick="closeShareSheet()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MONTH CALENDAR SHEET ================= -->
+  <div class="overlay" id="monthOverlay">
+    <div class="sheet" style="padding-bottom:max(18px, env(safe-area-inset-bottom));">
+      <div class="sheet-handle"></div>
+      <div class="month-header">
+        <button class="icon-btn" onclick="shiftMonth(-1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="label" id="monthLabel">—</div>
+        <button class="icon-btn" onclick="shiftMonth(1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="month-weekday-row" id="monthWeekdayRow"></div>
+      <div class="month-days-grid" id="monthDaysGrid"></div>
     </div>
   </div>
 
@@ -607,6 +775,7 @@ function fmtTimeNow(){
 }
 const WEEKDAY_ABBR_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_NAMES_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_ABBR_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function getWeekStart(){
   return localStorage.getItem('weekStart') || 'sun'; // 'sun' | 'mon'
@@ -615,11 +784,28 @@ function setWeekStart(v){
   localStorage.setItem('weekStart', v);
   render();
 }
+function getTheme(){
+  return localStorage.getItem('theme') || 'warm'; // 'warm' | 'cool'
+}
+function setTheme(v){
+  localStorage.setItem('theme', v);
+  applyTheme();
+  render();
+}
+function applyTheme(){
+  const theme = getTheme();
+  if(theme === 'cool'){
+    document.documentElement.setAttribute('data-theme','cool');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
 
 /* ============================================================
    初始化
 ============================================================ */
 (async function init(){
+  applyTheme();
   await openDB();
   allEntries = await dbAll();
   weekAnchor = new Date(selectedDate);
@@ -628,6 +814,10 @@ function setWeekStart(v){
     if(e.target.value){ selectedDate = e.target.value; weekAnchor = new Date(selectedDate); render(); }
   });
   document.getElementById('imgFileInput').addEventListener('change', handleImageSelect);
+  document.getElementById('cameraFileInput').addEventListener('change', handleImageSelect);
+  document.getElementById('entryDate').addEventListener('change', updateComposerMetaDisplay);
+  document.getElementById('entryTime').addEventListener('change', updateComposerMetaDisplay);
+  document.getElementById('entryText').addEventListener('input', autoGrowEntryText);
   document.getElementById('tagInput').addEventListener('keydown', (e)=>{
     if(e.key === 'Enter'){
       e.preventDefault();
@@ -711,6 +901,58 @@ function renderWeekStrip(){
 function selectDate(ds){
   selectedDate = ds;
   currentView = 'timeline';
+  render();
+}
+function goToday(){
+  selectedDate = todayStr();
+  currentView = 'timeline';
+  render();
+}
+
+/* ---------- Month calendar ---------- */
+let monthViewDate = new Date();
+function openMonthView(){
+  monthViewDate = new Date(selectedDate);
+  renderMonthView();
+  document.getElementById('monthOverlay').classList.add('show');
+}
+function closeMonthView(){
+  document.getElementById('monthOverlay').classList.remove('show');
+}
+function shiftMonth(delta){
+  monthViewDate.setMonth(monthViewDate.getMonth()+delta);
+  renderMonthView();
+}
+function renderMonthView(){
+  document.getElementById('monthLabel').textContent = `${MONTH_NAMES_EN[monthViewDate.getMonth()]} ${monthViewDate.getFullYear()}`;
+  const weekStart = getWeekStart();
+  const weekdayOrder = weekStart==='mon' ? [1,2,3,4,5,6,0] : [0,1,2,3,4,5,6];
+  document.getElementById('monthWeekdayRow').innerHTML = weekdayOrder.map(i=>`<div>${WEEKDAY_ABBR_EN[i]}</div>`).join('');
+
+  const year = monthViewDate.getFullYear();
+  const month = monthViewDate.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  const offset = weekStart==='mon' ? (firstOfMonth.getDay()+6)%7 : firstOfMonth.getDay();
+  const gridStart = new Date(year, month, 1 - offset);
+
+  const entryDates = new Set(allEntries.map(e=>e.date));
+  let html = '';
+  for(let i=0;i<42;i++){
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate()+i);
+    const ds = fmtDate(d);
+    const muted = d.getMonth() !== month;
+    const isSelected = ds === selectedDate;
+    const isToday = ds === todayStr();
+    const hasEntry = entryDates.has(ds);
+    html += `<div class="month-day ${muted?'muted':''} ${isSelected?'selected':''} ${isToday?'today':''} ${hasEntry?'has-entry':''}" onclick="selectMonthDay('${ds}')">${d.getDate()}</div>`;
+  }
+  document.getElementById('monthDaysGrid').innerHTML = html;
+}
+function selectMonthDay(ds){
+  selectedDate = ds;
+  currentView = 'timeline';
+  closeMonthView();
   render();
 }
 
@@ -846,6 +1088,13 @@ function renderSettingsView(){
       <div class="stat-box"><div class="num">${totalImages}</div><div class="lbl">張照片</div></div>
     </div>
     <div class="settings-section">
+      <h3>主題色</h3>
+      <div class="tag-grid">
+        <div class="tag-chip ${getTheme()==='warm'?'active':''}" onclick="setTheme('warm')">暖色系</div>
+        <div class="tag-chip ${getTheme()==='cool'?'active':''}" onclick="setTheme('cool')">冷色系</div>
+      </div>
+    </div>
+    <div class="settings-section">
       <h3>一週開始日</h3>
       <div class="tag-grid">
         <div class="tag-chip ${getWeekStart()==='sun'?'active':''}" onclick="setWeekStart('sun')">週日 (Sun)</div>
@@ -885,7 +1134,7 @@ function exportData(){
 }
 function toMarkdown(entries){
   const sorted = [...entries].sort((a,b)=> (a.date+a.time) < (b.date+b.time) ? -1 : 1);
-  let md = `# 時光日記備份\n匯出時間: ${new Date().toISOString()}\n`;
+  let md = `# Drawer Diary 備份\n匯出時間: ${new Date().toISOString()}\n`;
   let lastDate = null;
   sorted.forEach(e=>{
     if(e.date !== lastDate){
@@ -914,6 +1163,227 @@ function exportMarkdown(){
   a.remove();
   URL.revokeObjectURL(url);
   showToast('已匯出文字備份');
+}
+
+/* ---------- 分享今天的日記 ---------- */
+function openShareSheet(){
+  document.getElementById('shareOverlay').classList.add('show');
+}
+function closeShareSheet(){
+  document.getElementById('shareOverlay').classList.remove('show');
+}
+function getDayLabel(dateStr){
+  const d = new Date(dateStr);
+  return `${WEEKDAY_ABBR_EN[d.getDay()]}, ${MONTH_NAMES_EN[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+async function shareTodayAsText(){
+  closeShareSheet();
+  const entries = allEntries.filter(e=>e.date===selectedDate).sort((a,b)=>a.time.localeCompare(b.time));
+  if(entries.length===0){ showToast('這天還沒有日記可以分享'); return; }
+  let text = `${getDayLabel(selectedDate)}\n\n`;
+  entries.forEach(e=>{
+    text += `${e.time}  ${e.text||''}\n`;
+    if(e.tags && e.tags.length) text += `${e.tags.map(t=>'#'+t).join(' ')}\n`;
+    text += `\n`;
+  });
+  text += '— Drawer Diary';
+  if(navigator.share){
+    try{ await navigator.share({ text, title:'Drawer Diary' }); return; }
+    catch(err){ if(err && err.name==='AbortError') return; }
+  }
+  const blob = new Blob([text], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `diary-${selectedDate}.txt`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  showToast('已下載文字檔');
+}
+async function shareTodayAsImage(){
+  closeShareSheet();
+  const entries = allEntries.filter(e=>e.date===selectedDate).sort((a,b)=>a.time.localeCompare(b.time));
+  if(entries.length===0){ showToast('這天還沒有日記可以分享'); return; }
+  showToast('圖片產生中...');
+  try{
+    const blob = await renderDayToImageBlob(selectedDate, entries);
+    const file = new File([blob], `diary-${selectedDate}.png`, {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({ files:[file], title:'Drawer Diary' }); return; }
+      catch(err){ if(err && err.name==='AbortError') return; }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `diary-${selectedDate}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast('已下載圖片檔');
+  }catch(err){
+    showToast('圖片產生失敗');
+  }
+}
+
+function themeColor(varName, fallback){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return v || fallback;
+}
+function wrapCanvasText(ctx, str, maxWidth){
+  const paragraphs = str.split('\n');
+  const lines = [];
+  paragraphs.forEach(p=>{
+    if(p === ''){ lines.push(''); return; }
+    let line = '';
+    for(const ch of p){
+      const test = line + ch;
+      if(ctx.measureText(test).width > maxWidth && line !== ''){
+        lines.push(line);
+        line = ch;
+      } else {
+        line = test;
+      }
+    }
+    if(line) lines.push(line);
+  });
+  return lines;
+}
+function loadImageEl(src){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.onload = ()=>resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+function canvasRoundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function drawImageCover(ctx,img,dx,dy,dw,dh,radius){
+  const ir = img.width/img.height;
+  const dr = dw/dh;
+  let sx,sy,sw,sh;
+  if(ir>dr){ sh=img.height; sw=sh*dr; sx=(img.width-sw)/2; sy=0; }
+  else { sw=img.width; sh=sw/dr; sx=0; sy=(img.height-sh)/2; }
+  ctx.save();
+  canvasRoundRect(ctx,dx,dy,dw,dh,radius);
+  ctx.clip();
+  ctx.drawImage(img, sx,sy,sw,sh, dx,dy,dw,dh);
+  ctx.restore();
+}
+async function renderDayToImageBlob(date, entries){
+  const W = 720;
+  const PAD = 36;
+  const TIME_COL = 46;
+  const cardX = PAD + TIME_COL;
+  const cardW = W - PAD*2 - TIME_COL;
+
+  const bg = themeColor('--frame', '#FBF8F3');
+  const bubble = themeColor('--bubble', '#FFFFFF');
+  const textCol = themeColor('--text', '#2B2A28');
+  const textSoft = themeColor('--text-soft', '#9A948A');
+  const accentDark = themeColor('--accent-dark', '#D9A94F');
+
+  const measureCanvas = document.createElement('canvas');
+  const mctx = measureCanvas.getContext('2d');
+
+  let y = PAD + 40;
+  const layouts = [];
+  for(const e of entries){
+    let cardH = 20;
+    mctx.font = '400 15px -apple-system, "PingFang TC", sans-serif';
+    const textLines = e.text ? wrapCanvasText(mctx, e.text, cardW-28) : [];
+    cardH += textLines.length * 22;
+    if(e.tags && e.tags.length) cardH += 30;
+    let loadedImages = [];
+    if(e.images && e.images.length){
+      for(const src of e.images){
+        try{ loadedImages.push(await loadImageEl(src)); }catch(err){ /* skip broken image */ }
+      }
+      if(loadedImages.length){
+        const perRow = loadedImages.length===1 ? 1 : 3;
+        const rows = Math.ceil(loadedImages.length/perRow);
+        const cellW = (cardW-28-6*(perRow-1))/perRow;
+        const cellH = cellW*0.75;
+        cardH += rows*(cellH+6) + 6;
+      }
+    }
+    cardH += 16;
+    layouts.push({ e, y, textLines, loadedImages, cardH });
+    y += cardH + 18;
+  }
+  y += PAD;
+
+  const scale = 2;
+  const canvas = document.createElement('canvas');
+  canvas.width = W*scale;
+  canvas.height = y*scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,W,y);
+
+  ctx.fillStyle = textCol;
+  ctx.font = '700 22px -apple-system, "PingFang TC", sans-serif';
+  ctx.fillText(getDayLabel(date), PAD, PAD+6);
+
+  for(const layout of layouts){
+    const { e, y:ey, textLines, loadedImages, cardH } = layout;
+    ctx.fillStyle = textSoft;
+    ctx.font = '400 13px -apple-system, sans-serif';
+    ctx.fillText(e.time, PAD, ey+22);
+
+    canvasRoundRect(ctx, cardX, ey, cardW, cardH, 16);
+    ctx.fillStyle = bubble;
+    ctx.fill();
+
+    let cy = ey + 22;
+    ctx.fillStyle = textCol;
+    ctx.font = '400 15px -apple-system, "PingFang TC", sans-serif';
+    textLines.forEach(line=>{
+      cy += 4;
+      ctx.fillText(line, cardX+14, cy+14);
+      cy += 18;
+    });
+
+    if(e.tags && e.tags.length){
+      let tx = cardX+14;
+      cy += 12;
+      ctx.font = '400 12px -apple-system, sans-serif';
+      e.tags.forEach(t=>{
+        const label = '#'+t;
+        const tw = ctx.measureText(label).width + 16;
+        canvasRoundRect(ctx, tx, cy-14, tw, 22, 11);
+        ctx.fillStyle = 'rgba(217,169,79,0.18)';
+        ctx.fill();
+        ctx.fillStyle = accentDark;
+        ctx.fillText(label, tx+8, cy+1);
+        tx += tw+6;
+      });
+      cy += 14;
+    }
+
+    if(loadedImages.length){
+      const perRow = loadedImages.length===1 ? 1 : 3;
+      const cellW = (cardW-28-6*(perRow-1))/perRow;
+      const cellH = cellW*0.75;
+      cy += 10;
+      let col = 0, row = 0;
+      loadedImages.forEach(img=>{
+        const dx = cardX+14 + col*(cellW+6);
+        const dy = cy + row*(cellH+6);
+        drawImageCover(ctx, img, dx, dy, cellW, cellH, 8);
+        col++;
+        if(col>=perRow){ col=0; row++; }
+      });
+    }
+  }
+
+  return new Promise(resolve=>canvas.toBlob(resolve, 'image/png'));
 }
 function parseMarkdownBackup(text){
   text = text.replace(/\r\n/g,'\n');
@@ -999,21 +1469,37 @@ async function clearAllData(){
 ============================================================ */
 function openEntrySheet(entry){
   editingEntryId = entry ? entry.id : null;
-  document.getElementById('entrySheetTitle').textContent = entry ? '編輯日記' : '新增日記';
-  document.getElementById('entryDate').value = entry ? entry.date : selectedDate;
-  document.getElementById('entryTime').value = entry ? entry.time : fmtTimeNow();
+  const date = entry ? entry.date : selectedDate;
+  const time = entry ? entry.time : fmtTimeNow();
+  document.getElementById('entryDate').value = date;
+  document.getElementById('entryTime').value = time;
   document.getElementById('entryText').value = entry ? (entry.text||'') : '';
   pendingImages = entry && entry.images ? [...entry.images] : [];
   pendingTags = entry && entry.tags ? [...entry.tags] : [];
   renderTagInputRow();
   renderImgPreview();
   renderTagSuggestions();
+  updateComposerMetaDisplay();
+  document.getElementById('composerDateTimeRow').style.display = 'none';
+  const tagRow = document.getElementById('tagInputRow');
+  const tagBtn = document.getElementById('tagToggleBtn');
+  if(pendingTags.length){
+    tagRow.style.display = 'flex';
+    tagBtn.classList.add('active');
+  } else {
+    tagRow.style.display = 'none';
+    tagBtn.classList.remove('active');
+  }
+  const ta = document.getElementById('entryText');
+  ta.style.height = 'auto';
+  updateSendBtnState();
   document.getElementById('entryOverlay').classList.add('show');
-  setTimeout(()=>document.getElementById('entryText').focus(), 250);
+  setTimeout(()=>ta.focus(), 250);
 }
 function closeEntrySheet(){
   document.getElementById('entryOverlay').classList.remove('show');
   editingEntryId = null;
+  if(isRecording && speechRecognizer){ speechRecognizer.stop(); }
 }
 function genId(){
   return 'e_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
@@ -1042,7 +1528,89 @@ async function saveEntry(){
   showToast('已儲存');
 }
 
-/* ---------- Tag input ---------- */
+/* ---------- Composer meta (date/time) ---------- */
+function formatComposerMeta(dateStr, timeStr){
+  const d = new Date(dateStr);
+  if(isNaN(d.getTime())) return '—';
+  return `${MONTH_ABBR_EN[d.getMonth()]} ${d.getDate()}  ${timeStr}`;
+}
+function updateComposerMetaDisplay(){
+  const dv = document.getElementById('entryDate').value;
+  const tv = document.getElementById('entryTime').value;
+  document.getElementById('composerMeta').textContent = formatComposerMeta(dv, tv);
+}
+function toggleComposerDateTime(){
+  const row = document.getElementById('composerDateTimeRow');
+  const showing = row.style.display !== 'none';
+  row.style.display = showing ? 'none' : 'flex';
+}
+
+/* ---------- Composer tag row toggle ---------- */
+function toggleTagRow(){
+  const row = document.getElementById('tagInputRow');
+  const btn = document.getElementById('tagToggleBtn');
+  const showing = row.style.display !== 'none';
+  if(showing){
+    row.style.display = 'none';
+    btn.classList.remove('active');
+  } else {
+    row.style.display = 'flex';
+    btn.classList.add('active');
+    document.getElementById('tagInput').focus();
+  }
+}
+
+/* ---------- Composer textarea auto-grow + send button state ---------- */
+function autoGrowEntryText(){
+  const ta = document.getElementById('entryText');
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, window.innerHeight*0.38) + 'px';
+  updateSendBtnState();
+}
+function updateSendBtnState(){
+  const hasContent = document.getElementById('entryText').value.trim().length>0 || pendingImages.length>0;
+  document.getElementById('sendBtn').classList.toggle('active', hasContent);
+}
+
+/* ---------- Camera / gallery triggers ---------- */
+function triggerCamera(){
+  document.getElementById('cameraFileInput').click();
+}
+function triggerGallery(){
+  document.getElementById('imgFileInput').click();
+}
+
+/* ---------- Voice input (Web Speech API, if supported) ---------- */
+let speechRecognizer = null;
+let isRecording = false;
+function toggleVoiceInput(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ showToast('此瀏覽器不支援語音輸入'); return; }
+  const micBtn = document.getElementById('micBtn');
+  if(isRecording){
+    speechRecognizer && speechRecognizer.stop();
+    return;
+  }
+  speechRecognizer = new SR();
+  speechRecognizer.lang = 'zh-TW';
+  speechRecognizer.interimResults = false;
+  speechRecognizer.continuous = false;
+  speechRecognizer.onresult = (e)=>{
+    const transcript = e.results[0][0].transcript;
+    const ta = document.getElementById('entryText');
+    ta.value = ta.value ? (ta.value + transcript) : transcript;
+    autoGrowEntryText();
+  };
+  speechRecognizer.onend = ()=>{ isRecording=false; micBtn.classList.remove('recording'); };
+  speechRecognizer.onerror = ()=>{ isRecording=false; micBtn.classList.remove('recording'); showToast('語音輸入失敗'); };
+  try{
+    speechRecognizer.start();
+    isRecording = true;
+    micBtn.classList.add('recording');
+  }catch(err){
+    showToast('語音輸入無法啟動');
+  }
+}
 function addPendingTag(name){
   if(!name) return;
   name = name.replace(/^#/,'').trim();
@@ -1109,6 +1677,7 @@ function renderImgPreview(){
     wrap.innerHTML = `<img src="${src}"><div class="rm" onclick="removePendingImage(${idx})">×</div>`;
     row.insertBefore(wrap, addBtn);
   });
+  updateSendBtnState();
 }
 function removePendingImage(idx){
   pendingImages.splice(idx,1);
@@ -1125,6 +1694,43 @@ function openActionSheet(id){
 function closeActionSheet(){
   document.getElementById('actionOverlay').classList.remove('show');
   actionTargetId = null;
+}
+async function copyTextToClipboard(str){
+  try{
+    await navigator.clipboard.writeText(str);
+    return true;
+  }catch(err){
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = str;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      return true;
+    }catch(e2){ return false; }
+  }
+}
+async function copyCurrentEntryText(){
+  const entry = allEntries.find(e=>e.id===actionTargetId);
+  closeActionSheet();
+  if(!entry) return;
+  const ok = await copyTextToClipboard(entry.text || '');
+  showToast(ok ? '已複製文字' : '複製失敗');
+}
+async function shareCurrentEntry(){
+  const entry = allEntries.find(e=>e.id===actionTargetId);
+  closeActionSheet();
+  if(!entry) return;
+  const shareText = `${entry.date} ${entry.time}\n${entry.text||''}`;
+  if(navigator.share){
+    try{ await navigator.share({ text: shareText }); return; }
+    catch(err){ if(err && err.name==='AbortError') return; }
+  }
+  const ok = await copyTextToClipboard(shareText);
+  showToast(ok ? '已複製內容，可貼到其他 App 分享' : '分享失敗');
 }
 function editCurrentEntry(){
   const entry = allEntries.find(e=>e.id===actionTargetId);
@@ -1159,6 +1765,12 @@ document.getElementById('entryOverlay').addEventListener('click', (e)=>{
 });
 document.getElementById('actionOverlay').addEventListener('click', (e)=>{
   if(e.target.id === 'actionOverlay') closeActionSheet();
+});
+document.getElementById('shareOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'shareOverlay') closeShareSheet();
+});
+document.getElementById('monthOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'monthOverlay') closeMonthView();
 });
 
 /* ============================================================
