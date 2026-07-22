@@ -1,6 +1,6 @@
 {
-  "name": "Drawer Diary",
-  "short_name": "Drawer Diary",
+  "name": "myDrawer",
+  "short_name": "myDrawer",
   "description": "離線個人時光日記，記錄每一天的文字、照片與標籤",
   "start_url": "./index.html",
   "scope": "./",
