@@ -54,7 +54,7 @@
     background:var(--frame);
   }
   body{
-    background:var(--bg);
+    background:var(--frame);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",Roboto,sans-serif;
     color:var(--text);
     -webkit-font-smoothing:antialiased;
@@ -68,9 +68,10 @@
   }
   #app{
     position:fixed;
-    top:0; left:0; right:0; bottom:0;
-    height:auto;
-    height:var(--app-height, auto);
+    top:0; left:0; right:0;
+    height:100vh;
+    height:var(--app-height, 100vh);
+    height:calc(var(--app-height, 100vh) + env(safe-area-inset-bottom));
     max-width:460px;
     margin:0 auto;
     background:var(--frame);
@@ -79,7 +80,7 @@
     box-shadow:0 0 40px rgba(0,0,0,0.06);
   }
   @media (min-width:520px){
-    body{ display:flex; align-items:center; justify-content:center; }
+    body{ background:var(--bg); display:flex; align-items:center; justify-content:center; }
     #app{ position:relative; top:auto; left:auto; right:auto; height:90vh; max-height:900px; border-radius:36px; overflow:hidden; }
   }
 
@@ -251,7 +252,7 @@
     box-shadow:0 1px 3px rgba(0,0,0,0.04);
   }
   .search-box input{
-    border:none;outline:none;background:none;flex:1;font-size:16px;color:var(--text);
+    border:none;outline:none;background:none;flex:1;font-size:14px;color:var(--text);
     font-family:inherit;
   }
   .search-box input::placeholder{ color:var(--text-soft); }
@@ -357,7 +358,7 @@
     border-radius:10px;
     padding:11px 12px;
     font-family:inherit;
-    font-size:16px;
+    font-size:15px;
     color:var(--text);
     background:var(--bubble);
     box-sizing:border-box;
@@ -369,6 +370,19 @@
     gap:10px;
   }
   .field-pair .field-group{ flex:1; min-width:0; }
+  textarea#entryText{
+    width:100%;
+    min-height:110px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:12px 14px;
+    font-family:inherit;
+    font-size:14.5px;
+    resize:vertical;
+    background:var(--bubble);
+    color:var(--text);
+    outline:none;
+  }
   .tag-input-row{
     display:flex;flex-wrap:wrap;gap:6px;
     border:1px solid var(--border);
@@ -379,7 +393,7 @@
   }
   .tag-input-row input{
     border:none;outline:none;flex:1;min-width:80px;
-    font-family:inherit;font-size:16px;color:var(--text);
+    font-family:inherit;font-size:13px;color:var(--text);
     background:none;
   }
   .tag-chip.editable{
@@ -564,7 +578,7 @@
   .composer-datetime-row{
     display:flex;gap:8px;margin:0 2px 10px;
   }
-  .composer-datetime-row .field-input{ font-size:16px; padding:8px 10px; }
+  .composer-datetime-row .field-input{ font-size:13px; padding:8px 10px; }
   .composer-toolbar{
     display:flex;align-items:center;gap:4px;
     padding-top:8px;
@@ -749,53 +763,20 @@
 
 <script>
 /* ============================================================
-   視窗高度修正
-
-   靜止狀態完全交給 CSS 處理：#app 用 position:fixed +
-   top/left/right/bottom:0 + height:auto，跟這個檔案裡 html/body
-   已經驗證過會正確頂到螢幕真正邊緣（含底部安全區域）的寫法一致，
-   不再依賴 JS 去猜 100vh / 100dvh / innerHeight 等測量值——這些
-   在 iOS 獨立模式冷啟動時都曾經量到不準，而且瀏覽器本來就會自己
-   把 top+bottom 都是 0、height 是 auto 的固定定位元素正確撐滿。
-
-   JS 只在鍵盤真的彈出、可視高度明顯變小時才覆寫成明確的像素高度，
-   讓 #app 縮到鍵盤上緣；同時取消 iOS 對聚焦欄位做的自動整頁上推
-   捲動，避免畫面跳動、需要手動滑回來才能繼續輸入。
+   視窗高度修正 — 用 JS 實測像素高度，避免 iOS 獨立模式下
+   vh/dvh/position:fixed 量測誤差造成底部留白
 ============================================================ */
-let restingViewportHeight = null;
-
-function updateForKeyboard(){
-  const vv = window.visualViewport;
-  if(!vv) return;
-  const h = Math.round(vv.height);
-  if(restingViewportHeight === null || h > restingViewportHeight){
-    restingViewportHeight = h; // 沒鍵盤時的可視高度，動態校正基準值
-  }
-  const KEYBOARD_THRESHOLD = 80; // px，避免把小數誤差或工具列微調誤判成鍵盤
-  if(restingViewportHeight - h > KEYBOARD_THRESHOLD){
-    document.documentElement.style.setProperty('--app-height', h + 'px');
-  } else {
-    document.documentElement.style.removeProperty('--app-height');
-  }
+function setAppHeight(){
+  const h = window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', h + 'px');
 }
-
+setAppHeight();
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', ()=>{ setTimeout(setAppHeight, 150); });
+window.addEventListener('pageshow', setAppHeight);
 if(window.visualViewport){
-  updateForKeyboard();
-  window.visualViewport.addEventListener('resize', updateForKeyboard);
-  // 取消 iOS 對聚焦欄位做的自動整頁上推捲動（因為版面已固定，
-  // 這個內建行為只會造成畫面跳動，需手動滑回來才能繼續輸入）
-  const cancelForcedPan = ()=>{
-    if(window.scrollX !== 0 || window.scrollY !== 0){
-      window.scrollTo(0, 0);
-    }
-  };
-  window.visualViewport.addEventListener('scroll', cancelForcedPan);
-  window.addEventListener('scroll', cancelForcedPan);
+  window.visualViewport.addEventListener('resize', setAppHeight);
 }
-window.addEventListener('orientationchange', ()=>{
-  restingViewportHeight = null;
-  setTimeout(updateForKeyboard, 200);
-});
 
 /* ============================================================
    資料層 — IndexedDB
