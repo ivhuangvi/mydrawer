@@ -550,7 +550,16 @@
   .month-day.selected.has-entry::after{ background:#fff; }
 
   /* ---------- Composer (new/edit entry) ---------- */
-  .composer-sheet{ padding:14px 16px calc(16px + env(safe-area-inset-bottom)); }
+  .composer-sheet{
+    position:fixed;
+    left:0; right:0;
+    bottom:0;
+    max-width:460px;
+    margin:0 auto;
+    z-index:31;
+    padding:14px 16px calc(16px + env(safe-area-inset-bottom));
+    transition:transform 0.25s, bottom 0.15s;
+  }
   .composer-body{ max-height:46vh; overflow-y:auto; }
   .composer-textarea{
     width:100%;
@@ -778,6 +787,19 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('resize', setAppHeight);
 }
 
+/* ---------- 輸入框鍵盤跟隨（composer sheet） ---------- */
+function updateComposerKeyboardOffset(){
+  const sheet = document.querySelector('.composer-sheet');
+  if(!sheet) return;
+  if(!window.visualViewport){ sheet.style.bottom = '0px'; return; }
+  const kb = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+  sheet.style.bottom = kb + 'px';
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', updateComposerKeyboardOffset);
+  window.visualViewport.addEventListener('scroll', updateComposerKeyboardOffset);
+}
+
 /* ============================================================
    資料層 — IndexedDB
 ============================================================ */
@@ -902,6 +924,13 @@ function applyTheme(){
   document.getElementById('entryDate').addEventListener('change', updateComposerMetaDisplay);
   document.getElementById('entryTime').addEventListener('change', updateComposerMetaDisplay);
   document.getElementById('entryText').addEventListener('input', autoGrowEntryText);
+  document.getElementById('entryOverlay').addEventListener('focusin', ()=>{
+    setTimeout(updateComposerKeyboardOffset, 50);
+    setTimeout(updateComposerKeyboardOffset, 350);
+  });
+  document.getElementById('entryOverlay').addEventListener('focusout', ()=>{
+    setTimeout(updateComposerKeyboardOffset, 350);
+  });
   document.getElementById('tagInput').addEventListener('keydown', (e)=>{
     if(e.key === 'Enter'){
       e.preventDefault();
@@ -1659,6 +1688,7 @@ function openEntrySheet(entry){
   const ta = document.getElementById('entryText');
   ta.style.height = 'auto';
   updateSendBtnState();
+  document.querySelector('.composer-sheet').style.bottom = '0px';
   document.getElementById('entryOverlay').classList.add('show');
   setTimeout(()=>ta.focus(), 250);
 }
@@ -1666,6 +1696,7 @@ function closeEntrySheet(){
   document.getElementById('entryOverlay').classList.remove('show');
   editingEntryId = null;
   if(isRecording && speechRecognizer){ speechRecognizer.stop(); }
+  document.querySelector('.composer-sheet').style.bottom = '0px';
 }
 function genId(){
   return 'e_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
