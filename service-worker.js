@@ -3,7 +3,7 @@
 // 使用者的日記內容一律存在 IndexedDB（由 index.html 內的程式碼處理），
 // 這個檔案只負責快取「app 本身的檔案」，不會碰到日記資料。
 
-const CACHE_VERSION = 'diary-v11';
+const CACHE_VERSION = 'diary-v12';
 const APP_SHELL = [
   './',
   './index.html',

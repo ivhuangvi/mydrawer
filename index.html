@@ -1488,11 +1488,16 @@ async function renderDayToImageBlob(date, entries){
   let y = PAD + 40;
   const layouts = [];
   for(const e of entries){
-    let cardH = 24;
+    let cardH = 0;
     mctx.font = '400 15px -apple-system, "PingFang TC", sans-serif';
     const textLines = e.text ? wrapCanvasText(mctx, e.text, cardW-28) : [];
-    cardH += textLines.length * 22;
-    if(e.tags && e.tags.length) cardH += 30;
+    if(textLines.length){
+      cardH += (textLines.length-1)*22 + 42;
+    } else {
+      cardH += 18;
+    }
+    let hasTrailing = false;
+    if(e.tags && e.tags.length){ cardH += 30; hasTrailing = true; }
     let loadedImages = [];
     if(e.images && e.images.length){
       for(const src of e.images){
@@ -1504,9 +1509,10 @@ async function renderDayToImageBlob(date, entries){
         const cellW = (cardW-28-6*(perRow-1))/perRow;
         const cellH = cellW*0.75;
         cardH += rows*(cellH+6) + 6;
+        hasTrailing = true;
       }
     }
-    cardH += 16;
+    if(hasTrailing) cardH += 16;
     layouts.push({ e, y, textLines, loadedImages, cardH });
     y += cardH + 18;
   }
