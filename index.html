@@ -1488,7 +1488,7 @@ async function renderDayToImageBlob(date, entries){
   let y = PAD + 40;
   const layouts = [];
   for(const e of entries){
-    let cardH = 20;
+    let cardH = 24;
     mctx.font = '400 15px -apple-system, "PingFang TC", sans-serif';
     const textLines = e.text ? wrapCanvasText(mctx, e.text, cardW-28) : [];
     cardH += textLines.length * 22;
@@ -1536,13 +1536,12 @@ async function renderDayToImageBlob(date, entries){
     ctx.fillStyle = bubble;
     ctx.fill();
 
-    let cy = ey + 22;
+    let cy = ey + 24;
     ctx.fillStyle = textCol;
     ctx.font = '400 15px -apple-system, "PingFang TC", sans-serif';
     textLines.forEach(line=>{
-      cy += 4;
-      ctx.fillText(line, cardX+14, cy+14);
-      cy += 18;
+      ctx.fillText(line, cardX+14, cy);
+      cy += 22;
     });
 
     if(e.tags && e.tags.length){
